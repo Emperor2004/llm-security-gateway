@@ -1,0 +1,7 @@
+{
+  "total_test_examples": 450,
+  "contaminated_count": 8,
+  "contaminated_pct": 1.78,
+  "similarity_threshold": 0.85,
+  "clean_test_count": 442
+}
