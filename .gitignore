@@ -71,3 +71,7 @@ data/synthetic_pii/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Project Status
+PROJECT_STATUS.md
+PROJECT_STATUS_UPDATE.md

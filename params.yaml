@@ -1,0 +1,45 @@
+# param.yaml
+# Parameters for the jailbreak-classifier data + training pipeline.
+# Actual source of truth for thresholds/splits is the code
+# (scripts/build_train_set.py, scripts/check_contamination.py,
+# app/jailbreak/train.py) — this file documents those values in one
+# place so they don't have to be reverse-engineered from the scripts.
+# Runtime gateway config lives in .env / app/config.py, kept separate
+# so retraining never touches runtime settings.
+
+dataset:
+  positive_sources:
+    - name: rubend18/ChatGPT-Jailbreak-Prompts
+      filter: "Jailbreak Score > 50"
+    - name: TrustAIRLab/in-the-wild-jailbreak-prompts
+      config: jailbreak_2023_12_25
+  negative_source:
+    name: tatsu-lab/alpaca
+    note: three-way disjoint split (train/val/test) so benign holdout is never reused
+  val_test_source:
+    name: JailbreakBench/JBB-Behaviors
+    config: judge_comparison
+    note: val/test drawn cross-source from JBB + held-out Alpaca, disjoint from train's rubend18/TrustAIRLab distribution
+    val_fraction: 0.33
+  alpaca_val_holdout: 100
+  alpaca_test_holdout: 150
+  seed: 42
+
+contamination_check:
+  method: embedding_cosine_similarity
+  embedder: sentence-transformers/all-MiniLM-L6-v2
+  similarity_threshold: 0.85
+  note: any test example with max cosine similarity to a train example above threshold is dropped before final metrics are reported
+
+model:
+  base: distilbert-base-uncased
+  max_length: 256
+  batch_size: 16
+  epochs: 4
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  early_stopping_patience: 2
+  metric_for_best_model: f1
+
+output:
+  model_dir: models/jailbreak_classifier

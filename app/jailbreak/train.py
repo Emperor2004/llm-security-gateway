@@ -24,8 +24,8 @@ from transformers import (
 )
 
 MODEL_NAME = "distilbert-base-uncased"
-MAX_LENGTH = 256
-BATCH_SIZE = 16
+MAX_LENGTH = 96
+BATCH_SIZE = 128
 OUTPUT_DIR = "./models/jailbreak_classifier"
 
 
@@ -68,12 +68,21 @@ def compute_metrics(eval_pred):
 
 
 def main():
+    torch.set_num_threads(8)
+    print("Running pre-training label bias gate check against data/train_set.csv...")
+    from scripts.check_label_bias import check_label_bias
+    if not check_label_bias("./data/train_set.csv"):
+        import sys
+        print("[FATAL] Pre-training bias check FAILED! Aborting training.", file=sys.stderr)
+        sys.exit(1)
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     if device == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
 
     train_df, val_df, test_df = load_and_split_data()
+
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
@@ -97,17 +106,16 @@ def main():
 
     training_args = TrainingArguments(
         output_dir="./models/checkpoints",
-        num_train_epochs=4,
+        num_train_epochs=2,
         per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE,
-        gradient_accumulation_steps=2,
+        gradient_accumulation_steps=1,
         learning_rate=2e-5,
         weight_decay=0.01,
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model="f1",
-        logging_dir="./logs",
         logging_steps=10,
         fp16=(device == "cuda"),
         remove_unused_columns=False,
@@ -131,7 +139,7 @@ def main():
     print(f"\nFinal test metrics: {test_results}")
 
     print(f"\nSaving model to {OUTPUT_DIR}")
-    trainer.save_model(OUTPUT_DIR)
+    trainer.model.save_pretrained(OUTPUT_DIR)
     tokenizer.save_pretrained(OUTPUT_DIR)
 
     with open(f"{OUTPUT_DIR}/test_metrics.txt", "w") as f:

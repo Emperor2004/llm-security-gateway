@@ -139,4 +139,12 @@ if __name__ == "__main__":
     test_df.to_csv("./data/test_set.csv", index=False)
 
     print("\nSaved train_set.csv, val_set.csv, test_set.csv")
-    print("Next: rerun check_contamination.py against BOTH val_set.csv and test_set.csv, then rerun train.py")
+
+    print("\nRunning automated label bias check on generated train_set.csv...")
+    from scripts.check_label_bias import check_label_bias
+    if not check_label_bias("./data/train_set.csv"):
+        import sys
+        print("\n[FATAL] Dataset build failed due to label bias check failure!", file=sys.stderr)
+        sys.exit(1)
+
+    print("Next: rerun check_contamination.py against BOTH val_set.csv and test_set.csv, then rerun train.py")
