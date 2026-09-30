@@ -18,7 +18,7 @@ jobs:
 
       - name: Install runtime + test dependencies
         run: |
-          pip install fastapi "uvicorn[standard]" httpx pytest
+          pip install fastapi "uvicorn[standard]" httpx pytest rich
           # Full requirements.txt (ML extras for jailbreak training) is
           # intentionally NOT installed here — it's heavy and unrelated
           # to gateway correctness. Training is a separate, manual job.
