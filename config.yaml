@@ -1,0 +1,47 @@
+# LLM Security Gateway Configuration
+# Values here provide defaults, which can be overridden via environment variables.
+
+server:
+  env: "development"
+  host: "0.0.0.0"
+  port: 8080
+
+llm:
+  provider: "mock"             # "mock" | "ollama" | "openai"
+  base_url: "http://localhost:11434/v1"
+  api_key: ""
+  model: "llama3.1"
+  timeout_s: 30.0
+
+auth:
+  api_keys:
+    demo-admin-key: "admin"
+    demo-user-key: "user"
+    demo-readonly-key: "readonly"
+
+pipeline:
+  stages:
+    auth:
+      enabled: true
+    rate_limit:
+      enabled: true
+      capacity: 20
+      refill_per_sec: 0.5
+    anomaly:
+      enabled: true
+      window_s: 60.0
+      burst_threshold: 30
+      diversity_min_requests: 15
+      diversity_threshold: 0.85
+    jailbreak:
+      enabled: true
+      threshold: 0.5
+      model_path: "models/jailbreak_classifier"
+    pii:
+      enabled: true
+      redact_in_logs: true
+      block_on_detect: false
+    audit:
+      enabled: true
+      log_level: "INFO"
+      log_file: "logs/gateway.jsonl"

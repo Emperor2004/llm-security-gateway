@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm-security-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=production
+      - HOST=0.0.0.0
+      - PORT=8080
+      - LLM_PROVIDER=ollama
+      - LLM_BASE_URL=http://ollama:11434/v1
+      - LLM_MODEL=llama3.1
+      - LOG_FILE=/app/logs/gateway.jsonl
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models:ro
+    depends_on:
+      - ollama
+    networks:
+      - gateway-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - gateway-net
+
+volumes:
+  ollama_data:
+    driver: local
+
+networks:
+  gateway-net:
+    driver: bridge
