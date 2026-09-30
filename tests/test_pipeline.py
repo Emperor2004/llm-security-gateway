@@ -92,3 +92,22 @@ async def test_pipeline_response_processing():
     result_ctx = await pipeline.execute_response(ctx)
 
     assert result_ctx.response_text == "PREFIX: original answer"
+
+
+@pytest.mark.anyio
+async def test_pipeline_always_run_stage_executes_on_block():
+    custom_blocking_stage = MockCustomStage(name="blocking_stage")
+    always_run_stage = MockCustomStage(name="telemetry_stage", always_run=True)
+    normal_stage = MockCustomStage(name="normal_stage")
+
+    pipeline = SecurityPipeline([custom_blocking_stage, normal_stage, always_run_stage])
+
+    ctx = SecurityContext(prompt="something evil that triggers block")
+    result_ctx = await pipeline.execute_request(ctx)
+
+    assert result_ctx.is_blocked
+    # Normal stage should NOT have executed
+    assert "normal_stage" not in result_ctx.metadata
+    # always_run stage MUST have executed
+    assert result_ctx.metadata.get("custom_stage_executed") is True
+

@@ -12,17 +12,19 @@ class AuditStage(PipelineStage):
     name = "audit"
 
     def __init__(self, enabled: bool = True):
-        super().__init__(name="audit", enabled=enabled)
+        super().__init__(name="audit", enabled=enabled, always_run=True)
 
     async def process_request(self, ctx: SecurityContext) -> SecurityContext:
         # If blocked at request stage, log the block immediately
         if ctx.is_blocked:
             principal_id = ctx.principal.id if ctx.principal else "anonymous"
+            metadata = dict(ctx.metadata)
+            metadata.pop("principal_id", None)
             log_event(
                 "request_blocked",
                 reason=ctx.block_reason,
                 principal_id=principal_id,
-                **ctx.metadata,
+                **metadata,
             )
         return ctx
 
@@ -30,11 +32,13 @@ class AuditStage(PipelineStage):
         principal_id = ctx.principal.id if ctx.principal else "anonymous"
 
         if ctx.is_blocked:
+            metadata = dict(ctx.metadata)
+            metadata.pop("principal_id", None)
             log_event(
                 "request_blocked",
                 reason=ctx.block_reason,
                 principal_id=principal_id,
-                **ctx.metadata,
+                **metadata,
             )
             return ctx
 

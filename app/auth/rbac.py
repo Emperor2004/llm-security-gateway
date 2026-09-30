@@ -7,6 +7,7 @@ Settings.api_keys() (env var API_KEYS_JSON), never hardcoded.
 """
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 
 from app.config import get_settings
@@ -34,8 +35,9 @@ class Principal:
     @property
     def id(self) -> str:
         # Stable, non-reversible identifier used for rate limiting / logging.
-        # Not cryptographic — just avoids logging raw API keys.
-        return f"{self.role}:{hash(self.api_key) & 0xFFFFFF:06x}"
+        # Uses sha256 to ensure consistency across multiple workers and restarts.
+        digest = hashlib.sha256(self.api_key.encode("utf-8")).hexdigest()[:6]
+        return f"{self.role}:{digest}"
 
     def has_permission(self, permission: str) -> bool:
         return permission in ROLE_PERMISSIONS.get(self.role, set())

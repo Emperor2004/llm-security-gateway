@@ -18,11 +18,13 @@ class PipelineStage(ABC):
 
     name: str = "base_stage"
     enabled: bool = True
+    always_run: bool = False
 
-    def __init__(self, name: str | None = None, enabled: bool = True):
+    def __init__(self, name: str | None = None, enabled: bool = True, always_run: bool = False):
         if name:
             self.name = name
         self.enabled = enabled
+        self.always_run = always_run
 
     async def process_request(self, ctx: SecurityContext) -> SecurityContext:
         """Inspect or mutate outbound prompt before LLM invocation.
@@ -36,7 +38,7 @@ class PipelineStage(ABC):
         return ctx
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} name={self.name} enabled={self.enabled}>"
+        return f"<{self.__class__.__name__} name={self.name} enabled={self.enabled} always_run={self.always_run}>"
 
 
 class SecurityPipeline:
@@ -70,17 +72,21 @@ class SecurityPipeline:
         return None
 
     async def execute_request(self, ctx: SecurityContext) -> SecurityContext:
-        """Run request through all enabled stages sequentially until completion or rejection."""
+        """Run request through all enabled stages sequentially until completion or rejection.
+
+        When a stage blocks the context, subsequent normal inspection stages are skipped,
+        but stages marked with always_run=True (such as AuditStage) will still execute.
+        """
         for stage in self._stages:
             if not stage.enabled:
+                continue
+            if ctx.is_blocked and not stage.always_run:
                 continue
             try:
                 ctx = await stage.process_request(ctx)
             except Exception as e:
                 logger.exception("Error executing request stage %s: %s", stage.name, e)
                 raise
-            if ctx.is_blocked:
-                break
         return ctx
 
     async def execute_response(self, ctx: SecurityContext) -> SecurityContext:
